@@ -1,0 +1,17 @@
+# Go build output
+*.exe
+*.out
+/bin/
+
+# Environment secrets
+.env
+*.env
+secrets/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+*.code-workspace
