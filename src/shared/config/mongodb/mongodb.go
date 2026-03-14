@@ -2,7 +2,8 @@ package mongodb
 
 import (
 	"api-monitoring/src/shared/config"
-	"api-monitoring/src/shared/logger"
+	"api-monitoring/src/shared/config/logger"
+
 	"context"
 
 	"go.mongodb.org/mongo-driver/mongo"

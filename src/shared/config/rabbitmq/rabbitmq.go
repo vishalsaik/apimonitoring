@@ -2,7 +2,7 @@ package rabbitmq
 
 import (
 	"api-monitoring/src/shared/config"
-	"api-monitoring/src/shared/logger"
+	"api-monitoring/src/shared/config/logger"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
