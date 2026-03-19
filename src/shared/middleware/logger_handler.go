@@ -1,0 +1,34 @@
+package middleware
+
+import (
+	"api-monitoring/src/shared/config/logger"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+)
+
+//	router.Use(func(c *gin.Context) {
+//			start := time.Now()
+//			c.Next()
+//			log.Info("Request",
+//				zap.String("method", c.Request.Method),
+//				zap.String("path", c.Request.URL.Path),
+//				zap.Int("status", c.Writer.Status()),
+//				zap.Duration("latency", time.Since(start)),
+//				zap.String("ip", c.ClientIP()),
+//			)
+//		})
+func LoggerHandler(log *logger.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+		log.Info("Request",
+			zap.String("method", c.Request.Method),
+			zap.String("path", c.Request.URL.Path),
+			zap.Int("status", c.Writer.Status()),
+			zap.Duration("latency", time.Since(start)),
+			zap.String("ip", c.ClientIP()),
+		)
+	}
+}
