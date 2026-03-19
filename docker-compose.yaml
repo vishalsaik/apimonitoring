@@ -52,6 +52,44 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+  server:
+    image: api-monitoring-server:latest
+    container_name: api-monitoring-server
+    ports:
+      - "5000:5000"
+    environment:
+      APP_ENV: development
+      APP_PORT: 5000
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: apimonitoring
+      MONGO_URL: mongodb://mongo:27017
+      MONGO_DB: apimonitoring
+      RABBITMQ_URL: amqp://api_user:api_password@rabbitmq:5672/api_vhost
+      RABBITMQ_QUEUE_NAME: api_hits
+      RABBITMQ_PUBLISH_CONFIRMATION: "true"
+      RABBITMQ_RETRY_COUNT: "3"
+      RABBITMQ_RETRY_DELAY: "500"
+      JWT_SECRET_KEY: your-local-dev-secret-key
+      JWT_EXPIRATION_TIME: "3600"
+      RATE_LIMIT_WINDOW_MS: "60000"
+      RATE_LIMIT_MAX_REQUESTS: "100"
+      PASSWORD_MIN_LENGTH: "8"
+      PASSWORD_REQUIRE_UPPERCASE: "true"
+      PASSWORD_REQUIRE_LOWERCASE: "true"
+      PASSWORD_REQUIRE_NUMBER: "true"
+      PASSWORD_REQUIRE_SPECIAL: "true"
+    networks:
+      - api-monitoring-network
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
   pgadmin:
     image: dpage/pgadmin4:7
     container_name: api-monitoring-pgadmin
