@@ -3,17 +3,23 @@ package main
 import (
 	"context"
 	stdlog "log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	"api-monitoring/src/shared/config"
-	"api-monitoring/src/shared/logger"
-	"api-monitoring/src/shared/mongodb"
-	"api-monitoring/src/shared/postgres"
-	"api-monitoring/src/shared/rabbitmq"
-
+	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+
+	"api-monitoring/handlers"
+	"api-monitoring/src/shared/config"
+	"api-monitoring/src/shared/config/logger"
+	"api-monitoring/src/shared/config/mongodb"
+	"api-monitoring/src/shared/config/postgres"
+	"api-monitoring/src/shared/config/rabbitmq"
+	"api-monitoring/src/shared/middleware"
+	"api-monitoring/src/shared/utils"
 )
 
 func main() {
@@ -59,9 +65,52 @@ func main() {
 		log.Info("Disconnected RabbitMQ successfully")
 	}()
 
+	// ── Router ────────────────────────────────────────────
+	router := gin.New()
+
+	// Request logger middleware
+	router.Use(middleware.LoggerHandler(log))
+
+	// Error handler middleware
+	router.Use(middleware.ErrorHandler(log))
+
+	// ── Routes ────────────────────────────────────────────
+	router.GET("/health", handlers.HealthCheckHandler)
+	router.GET("/", handlers.RootHandler)
+
+	// 404 handler
+	router.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, utils.ErrorResponse("Endpoint not found", http.StatusNotFound, nil))
+	})
+
+	// ── HTTP Server ───────────────────────────────────────
+	srv := &http.Server{
+		Addr:    ":" + cfg.Server.Port,
+		Handler: router,
+	}
+
+	// Start server in background goroutine
+	go func() {
+		log.Info("Server started", zap.String("port", cfg.Server.Port))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error("Server error", zap.Error(err))
+		}
+	}()
+
+	// ── Graceful Shutdown ─────────────────────────────────
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	log.Info("Server started — press Ctrl+C to stop")
 	<-quit
-	log.Info("Shutdown signal received, disconnecting...")
+
+	log.Info("Shutdown signal received, shutting down gracefully...")
+
+	// Give in-flight requests 10s to finish
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Error("Forced shutdown", zap.Error(err))
+	} else {
+		log.Info("HTTP server stopped")
+	}
 }
