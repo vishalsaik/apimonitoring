@@ -3,6 +3,7 @@ package repository
 import (
 	"api-monitoring/src/shared/config/logger"
 	"api-monitoring/src/shared/models"
+	"api-monitoring/src/shared/utils"
 	"context"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,7 +27,10 @@ func (r *MongoUserRepository) FindByID(ctx context.Context, id primitive.ObjectI
 	result := r.collection.FindOne(ctx, bson.M{"_id": id})
 	var user models.User
 	if err := result.Decode(&user); err != nil {
-		return nil, err
+		if err == mongo.ErrNoDocuments {
+			return nil, utils.NewNotFoundError("user not found")
+		}
+		return nil, utils.NewAppError(err.Error(), 500, nil)
 	}
 	return &user, nil
 }
@@ -51,7 +55,7 @@ func (r *MongoUserRepository) FindAll(ctx context.Context) ([]*models.User, erro
 func (r *MongoUserRepository) Create(ctx context.Context, user *models.User) (*models.User, error) {
 	result, err := r.collection.InsertOne(ctx, user)
 	if err != nil {
-		return nil, err
+		return nil, utils.NewAppError(err.Error(), 500, nil)
 	}
 	id := result.InsertedID.(primitive.ObjectID)
 	return r.FindByID(ctx, id)
@@ -60,7 +64,10 @@ func (r *MongoUserRepository) FindByUsername(ctx context.Context, username strin
 	result := r.collection.FindOne(ctx, bson.M{"username": username})
 	var user models.User
 	if err := result.Decode(&user); err != nil {
-		return nil, err
+		if err == mongo.ErrNoDocuments {
+			return nil, utils.NewNotFoundError("user not found")
+		}
+		return nil, utils.NewAppError(err.Error(), 500, nil)
 	}
 	return &user, nil
 }
@@ -69,7 +76,10 @@ func (r *MongoUserRepository) FindByEmail(ctx context.Context, email string) (*m
 	result := r.collection.FindOne(ctx, bson.M{"email": email})
 	var user models.User
 	if err := result.Decode(&user); err != nil {
-		return nil, err
+		if err == mongo.ErrNoDocuments {
+			return nil, utils.NewNotFoundError("user not found")
+		}
+		return nil, utils.NewAppError(err.Error(), 500, nil)
 	}
 	return &user, nil
 }
