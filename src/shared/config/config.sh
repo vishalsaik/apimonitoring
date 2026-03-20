@@ -28,9 +28,17 @@ export RABBITMQ_RETRY_DELAY=500
 export JWT_SECRET_KEY=your-local-dev-secret-key
 export JWT_EXPIRATION_TIME=3600
 
+# Cookie
+export COOKIE_MAX_AGE=3600
+export COOKIE_HTTP_ONLY=true
+export COOKIE_SECURE=false
+
 # Rate limiting
 export RATE_LIMIT_WINDOW_MS=60000
 export RATE_LIMIT_MAX_REQUESTS=100
+
+# CORS
+export ALLOWED_ORIGIN=http://localhost:3000
 
 #password validation
 export PASSWORD_MIN_LENGTH=8

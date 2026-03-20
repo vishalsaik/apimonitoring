@@ -11,15 +11,27 @@ type Config struct {
 	RabbitMQConfig  rabbitMQConfig
 	PostgresConfig  PostgresConfig
 	JwtConfig       jwtConfig
+	CookieConfig    CookieConfig
 	RatelimitConfig ratelimitConfig
+	CorsConfig      corsConfig
+}
+
+type corsConfig struct {
+	AllowedOrigin string
+}
+
+type CookieConfig struct {
+	MaxAge   int
+	HttpOnly bool
+	Secure   bool
 }
 type ratelimitConfig struct {
 	WindowMilliseconds int
 	MaxRequests        int
 }
 type jwtConfig struct {
-	jwtSecretKey   string
-	expirationTime int
+	SecretKey      string
+	ExpirationTime int
 }
 type serverConfig struct {
 	Environment string
@@ -83,12 +95,20 @@ func NewConfig() *Config {
 			RabbitMqretryDelay:          getEnvInt("RABBITMQ_RETRY_DELAY", 500),
 		},
 		JwtConfig: jwtConfig{
-			jwtSecretKey:   os.Getenv("JWT_SECRET_KEY"),
-			expirationTime: getEnvInt("JWT_EXPIRATION_TIME", 3600),
+			SecretKey:      os.Getenv("JWT_SECRET_KEY"),
+			ExpirationTime: getEnvInt("JWT_EXPIRATION_TIME", 3600),
+		},
+		CookieConfig: CookieConfig{
+			MaxAge:   getEnvInt("COOKIE_MAX_AGE", 3600),
+			HttpOnly: getEnvBool("COOKIE_HTTP_ONLY", true),
+			Secure:   getEnvBool("COOKIE_SECURE", false),
 		},
 		RatelimitConfig: ratelimitConfig{
 			WindowMilliseconds: getEnvInt("RATE_LIMIT_WINDOW_MS", 60000),
 			MaxRequests:        getEnvInt("RATE_LIMIT_MAX_REQUESTS", 100),
+		},
+		CorsConfig: corsConfig{
+			AllowedOrigin: os.Getenv("ALLOWED_ORIGIN"),
 		},
 	}
 }
