@@ -3,65 +3,53 @@ package main
 import (
 	"context"
 	stdlog "log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
-
-	"api-monitoring/src/shared/config"
-	"api-monitoring/src/shared/logger"
-	"api-monitoring/src/shared/mongodb"
-	"api-monitoring/src/shared/postgres"
-	"api-monitoring/src/shared/rabbitmq"
+	"time"
 
 	"go.uber.org/zap"
+
+	"api-monitoring/app"
+	"api-monitoring/handlers"
 )
 
 func main() {
-	cfg := config.NewConfig()
-
-	log, err := logger.NewLogger(cfg)
+	a, err := app.Initialize()
 	if err != nil {
-		stdlog.Fatalf("Failed to create logger: %v", err)
+		stdlog.Fatalf("Failed to initialize app: %v", err)
 	}
-	defer log.Sync()
+	defer a.Shutdown()
+	defer a.Log.Sync()
 
-	mongo, err := mongodb.NewMongoDBConfig(cfg, log)
-	if err != nil {
-		log.Error("Failed to connect to MongoDB", zap.Error(err))
-		return
+	router := handlers.NewRouter(a)
+
+	srv := &http.Server{
+		Addr:    ":" + a.Config.Server.Port,
+		Handler: router,
 	}
-	defer func() {
-		if err := mongo.Client.Disconnect(context.Background()); err != nil {
-			log.Error("Failed to disconnect MongoDB", zap.Error(err))
-		} else {
-			log.Info("Disconnected MongoDB successfully")
+
+	go func() {
+		a.Log.Info("Server started", zap.String("port", a.Config.Server.Port))
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			a.Log.Error("Server error", zap.Error(err))
 		}
 	}()
 
-	pg, err := postgres.NewPostgres(cfg, log)
-	if err != nil {
-		log.Error("Failed to connect to Postgres", zap.Error(err))
-		return
-	}
-	defer func() {
-		pg.Pool.Close()
-		log.Info("Disconnected Postgres pool successfully")
-	}()
-
-	rabbit, err := rabbitmq.NewRabbitMQ(cfg, log)
-	if err != nil {
-		log.Error("Failed to connect to RabbitMQ", zap.Error(err))
-		return
-	}
-	defer func() {
-		rabbit.Channel.Close()
-		rabbit.Connection.Close()
-		log.Info("Disconnected RabbitMQ successfully")
-	}()
-
+	// ── Graceful Shutdown ─────────────────────────────────
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	log.Info("Server started — press Ctrl+C to stop")
 	<-quit
-	log.Info("Shutdown signal received, disconnecting...")
+
+	a.Log.Info("Shutdown signal received, shutting down gracefully...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		a.Log.Error("Forced shutdown", zap.Error(err))
+	} else {
+		a.Log.Info("HTTP server stopped")
+	}
 }

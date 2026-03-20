@@ -2,7 +2,8 @@ package postgres
 
 import (
 	"api-monitoring/src/shared/config"
-	"api-monitoring/src/shared/logger"
+	"api-monitoring/src/shared/config/logger"
+
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
