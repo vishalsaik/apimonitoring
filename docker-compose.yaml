@@ -53,7 +53,7 @@ services:
       timeout: 5s
       retries: 5
   server:
-    image: api-monitoring-server:latest
+    image: stevenemo/api-monitoring-server:0.3
     container_name: api-monitoring-server
     ports:
       - "5000:5000"
@@ -81,6 +81,11 @@ services:
       PASSWORD_REQUIRE_LOWERCASE: "true"
       PASSWORD_REQUIRE_NUMBER: "true"
       PASSWORD_REQUIRE_SPECIAL: "true"
+      COOKIE_MAX_AGE: "3600"
+      COOKIE_HTTP_ONLY: "true"
+      COOKIE_SECURE: "false"
+      ALLOWED_ORIGIN: "http://localhost:3000"
+      
     networks:
       - api-monitoring-network
     restart: unless-stopped

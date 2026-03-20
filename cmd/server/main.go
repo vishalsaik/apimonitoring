@@ -23,7 +23,7 @@ func main() {
 	defer a.Shutdown()
 	defer a.Log.Sync()
 
-	router := handlers.NewRouter(a.Log)
+	router := handlers.NewRouter(a)
 
 	srv := &http.Server{
 		Addr:    ":" + a.Config.Server.Port,

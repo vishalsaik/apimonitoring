@@ -8,14 +8,18 @@ import (
 	"api-monitoring/src/shared/config/mongodb"
 	"api-monitoring/src/shared/config/postgres"
 	"api-monitoring/src/shared/config/rabbitmq"
+	authRepository "api-monitoring/src/shared/services/auth/repository"
+	"api-monitoring/src/shared/services/auth/controller"
+	"api-monitoring/src/shared/services/auth/service"
 )
 
 type App struct {
-	Config   *config.Config
-	Log      *logger.Logger
-	Mongo    *mongodb.MongoDB
-	Postgres *postgres.Postgres
-	Rabbit   *rabbitmq.RabbitMQ
+	Config         *config.Config
+	Log            *logger.Logger
+	Mongo          *mongodb.MongoDB
+	Postgres       *postgres.Postgres
+	Rabbit         *rabbitmq.RabbitMQ
+	AuthController *controller.AuthController
 }
 
 func Initialize() (*App, error) {
@@ -43,13 +47,18 @@ func Initialize() (*App, error) {
 		log.Error("Failed to connect to RabbitMQ")
 		return nil, err
 	}
+	collection := mongo.Client.Database(cfg.MongoDBConfig.MongoDBName).Collection("users")
+	userRepo := authRepository.NewMongoUserRepository(collection, log)
+	authSvc := service.NewAuthService(userRepo, cfg.JwtConfig.SecretKey, cfg.JwtConfig.ExpirationTime, log)
+	authCtrl := controller.NewAuthController(authSvc, cfg.CookieConfig)
 
 	return &App{
-		Config:   cfg,
-		Log:      log,
-		Mongo:    mongo,
-		Postgres: pg,
-		Rabbit:   rabbit,
+		Config:         cfg,
+		Log:            log,
+		Mongo:          mongo,
+		Postgres:       pg,
+		Rabbit:         rabbit,
+		AuthController: authCtrl,
 	}, nil
 }
 
